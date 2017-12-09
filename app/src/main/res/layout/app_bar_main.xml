@@ -31,7 +31,7 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="@dimen/fab_margin"
         app:layout_anchor="@+id/include"
-        app:layout_anchorGravity="left|bottom"
+        app:layout_anchorGravity="right|center"
         app:srcCompat="@android:drawable/ic_dialog_email"
         tools:layout_editor_absoluteY="510dp" />
 

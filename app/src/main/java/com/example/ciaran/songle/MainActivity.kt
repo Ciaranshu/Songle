@@ -30,6 +30,8 @@ import java.io.File
 import java.io.FileInputStream
 
 
+import com.google.maps.android.data.kml.KmlLayer
+
 class MainActivity : AppCompatActivity(),
         NavigationView.OnNavigationItemSelectedListener,
         OnMapReadyCallback,
@@ -43,6 +45,7 @@ class MainActivity : AppCompatActivity(),
     var mLocationPermissionGranted = false 
     private lateinit var mLastLocation : Location
     val TAG = "MapsActivity"
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -112,7 +115,7 @@ class MainActivity : AppCompatActivity(),
 
                 Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
 
-            mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient)
+           // mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient)
         } else {
             ActivityCompat.requestPermissions(this, arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION), PERMISSIONS_REQUESR_ACESS_FINE_LOCATION); }
 
@@ -142,6 +145,7 @@ class MainActivity : AppCompatActivity(),
 
 
     override fun onMapReady(googleMap: GoogleMap) {
+        println(">>>>> [$TAG] onMapReady")
         mMap = googleMap
 
         // Move and zoom the camera
@@ -161,7 +165,6 @@ class MainActivity : AppCompatActivity(),
         } catch (se : SecurityException) {
             println(">>>>> [$TAG] Security exception thrown [onMapReady]")
         }
-
 
     }
 
@@ -198,18 +201,11 @@ class MainActivity : AppCompatActivity(),
             R.id.nav_gallery -> {
 
             }
-            R.id.nav_slideshow -> {
 
-            }
             R.id.nav_manage -> {
 
             }
-            R.id.nav_share -> {
 
-            }
-            R.id.nav_send -> {
-
-            }
         }
 
         drawer_layout.closeDrawer(GravityCompat.START)
