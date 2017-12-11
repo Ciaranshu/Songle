@@ -17,5 +17,13 @@
         android:layout_height="match_parent"
         tools:context="com.example.ciaran.songle.MainActivity" />
 
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="382dp"
+        android:layout_height="7dp"
+        tools:layout_editor_absoluteX="0dp"
+        tools:layout_editor_absoluteY="0dp" />
+
 </android.support.constraint.ConstraintLayout>
 

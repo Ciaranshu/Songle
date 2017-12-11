@@ -14,6 +14,7 @@ import android.support.v7.app.ActionBarDrawerToggle
 import android.support.v7.app.AppCompatActivity
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.ProgressBar
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.location.LocationRequest
@@ -26,11 +27,11 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.app_bar_main.*
-import java.io.File
-import java.io.FileInputStream
+import java.net.URL
 
 
 import com.google.maps.android.data.kml.KmlLayer
+import kotlinx.android.synthetic.main.content_main.*
 
 class MainActivity : AppCompatActivity(),
         NavigationView.OnNavigationItemSelectedListener,
@@ -55,6 +56,7 @@ class MainActivity : AppCompatActivity(),
         fab.setOnClickListener { view ->
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                     .setAction("Action", null).show()
+            onGameBegin()
         }
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
@@ -104,6 +106,16 @@ class MainActivity : AppCompatActivity(),
         }
 
     }
+
+    fun onGameBegin() {
+        progressBar?.max = 1000
+        var refresh = DownloadSongs()
+        refresh.progressBar = progressBar
+        refresh.context = this
+        refresh.execute("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/songs.xml")
+
+    }
+
 
     override fun onConnected(connectionHint : Bundle?) {
 
