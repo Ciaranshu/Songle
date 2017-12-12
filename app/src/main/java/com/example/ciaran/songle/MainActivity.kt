@@ -35,11 +35,13 @@ import java.net.URL
 
 import com.google.maps.android.data.kml.KmlLayer
 import com.google.maps.android.data.kml.KmlPlacemark
+import com.google.maps.android.data.kml.KmlPoint
 import kotlinx.android.synthetic.main.content_main.*
 import org.jetbrains.anko.alert
 import org.jetbrains.anko.yesButton
 import java.io.*
 import java.net.HttpURLConnection
+import java.util.*
 
 class MainActivity : AppCompatActivity(),
         NavigationView.OnNavigationItemSelectedListener,
@@ -54,6 +56,11 @@ class MainActivity : AppCompatActivity(),
     var mLocationPermissionGranted = false 
     private lateinit var mLastLocation : Location
     val TAG = "MapsActivity"
+    var Markers:Iterable<KmlPlacemark> ?= null
+    var gameStarted:Boolean = false
+    var lyrics:String ?= null
+    var songList:List<Song>? = null
+    var gameMode:Int = 1 // 1:esay mode, 2:moderate mode, 3:hard mode
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,7 +71,11 @@ class MainActivity : AppCompatActivity(),
         fab.setOnClickListener { view ->
             Snackbar.make(view, "Game Start!", Snackbar.LENGTH_LONG)
                     .setAction("Action", null).show()
-            onGameBegin()
+            if (!gameStarted) {
+                Snackbar.make(view, "Game Start!", Snackbar.LENGTH_LONG)
+                        .setAction("Action", null).show()
+                onGameBegin()
+            }
         }
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
@@ -89,6 +100,10 @@ class MainActivity : AppCompatActivity(),
     override fun onStart() {
         super.onStart()
         mGoogleApiClient.connect()
+        var refresh = DownloadSongs()
+        refresh.context = this
+        songList = refresh.execute("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/songs.xml").get()
+
     }
 
     override fun onStop() {
@@ -116,21 +131,47 @@ class MainActivity : AppCompatActivity(),
     }
 
     fun onGameBegin() {
+        //randomly choose the a song from the song list
+        var Num:Int = rand(1,songList!!.size)
+        var songNum:String ?= null
+        if (Num!! < 10){
+            songNum = "0" + Num.toString()
+        }else{
+            songNum = Num.toString()
+        }
+
+        //randomly choose the option of map
+        var option:Int = rand(4,6) - gameMode
+
+
+        //generate current Map object according to songNum and mode option
+        var currenMap = Map(mMap,songNum,option)
+
+        //loading the maps
+        gameStarted = true
         progressBar?.max = 50
-        var refresh = DownloadSongs()
-        refresh.progressBar = progressBar
-        refresh.context = this
-        refresh.execute("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/songs.xml")
-
-
         var refreshMap = DownloadMap()
         refreshMap.progressBar = progressBar
         refreshMap.context = this
-        val layerList = refreshMap.execute(mMap).get()
-        layerList[4].addLayerToMap()
+
+        var layer:KmlLayer = refreshMap.execute(currenMap).get()
+        layer.addLayerToMap()
+        for (i in layer.containers){
+            this.Markers = i.placemarks
+        }
 
 
+        //loading the according lyrics
+        var refreshLyrics = DownloadLyrics()
+        refreshLyrics.context = this
+        lyrics  = refreshLyrics.execute("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+songNum+"/lyrics.txt").get()
 
+    }
+
+    val random = Random()
+
+    fun rand(from: Int, to: Int) : Int {
+        return random.nextInt(to - from) + from
     }
 
 
@@ -152,9 +193,14 @@ class MainActivity : AppCompatActivity(),
 
     override fun onLocationChanged(current: Location?) {
 
+
         if (current == null) {
             println("[onLocationChanged] Location unknown")
-        } else {
+        }
+        else if (gameStarted == true){
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(current.latitude,current.longitude), 17F))
+            CollectMarker(current.latitude, current.longitude)
+        }else {
             println("""[onLocationChanged] Lat/long now
 
             (${current.getLatitude()},
@@ -163,17 +209,39 @@ class MainActivity : AppCompatActivity(),
 
             )
 
-
         }
 
     }
 
-    fun CollectMarker(longitude: Double, latitude: Double):  KmlPlacemark? {
-        var currentMin = 1000000F
-        var currentResult: KmlPlacemark ?= null
-        val results: Float = 0F
-        return currentResult
+    fun CollectMarker(latitude: Double, longitude: Double):  Boolean {
+        var min = 3F //minimum collection distance is 3 meters
+        var markLat:Double = 0.0
+        var markLng:Double = 0.0
+        var ob: String? = null
+        val results = FloatArray(10)
+        var lyricsY:Int = 0
+        var lyricsX: Int = 0
+
+        //judge if the distance between current position and any markers is less than the minimum distance for successful collection
+        for (i in this.Markers!!){
+            if (i.hasGeometry()){
+                ob = i.geometry.geometryObject.toString()
+                markLat = ob.split("(", ",", ")")[1].toDouble()
+                markLng = ob.split("(", ",", ")")[2].toDouble()
+                Location.distanceBetween(latitude, longitude, markLat,markLng,results)
+                if (results[0] < min) {
+                    lyricsY = i.properties.toList()[0].toString().split("=",":")[1].toInt()
+                    lyricsX = i.properties.toList()[0].toString().split("=",":")[2].toInt()
+
+                }
+            }
+
+        }
+
+        return false
     }
+
+
 
     override fun onConnectionSuspended(ﬂag : Int) {
         println(" >>>> onConnectionSuspended")

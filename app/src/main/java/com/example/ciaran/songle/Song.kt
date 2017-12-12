@@ -11,6 +11,7 @@ class Song{
     var title: String? = null
     var link: String? = null
 
+
     constructor(number:Int, artist: String, title: String, link: String){
         this.number = number
         this.artist = artist
