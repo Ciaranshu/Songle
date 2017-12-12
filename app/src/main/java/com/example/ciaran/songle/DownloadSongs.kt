@@ -16,7 +16,6 @@ import java.net.URL
  */
 class DownloadSongs: AsyncTask<String, Int, String>() {
     var progressBar: ProgressBar? = null
-    var i = 0
     var context: Context? = null
     //任务执行之前开始调用此方法，可以在这里显示进度对话框。
 
@@ -45,7 +44,6 @@ class DownloadSongs: AsyncTask<String, Int, String>() {
         var stream:InputStream = downloadUrl(urlString) // Do something with stream e.g. parse as XML, build result
         val Songlist = SongsListParser()
         var songs: List<Song>? = null
-
         try {
             songs = Songlist.parse(stream)
             // Makes sure that the InputStream is closed after the app is
@@ -92,6 +90,6 @@ class DownloadSongs: AsyncTask<String, Int, String>() {
     override fun onPostExecute(result: String?) {
         super.onPostExecute(result)
 
-        Toast.makeText(context,"Finish Loading",Toast.LENGTH_LONG).show()
+        Toast.makeText(context,"Finish Loading Songs",Toast.LENGTH_LONG).show()
     }
 }

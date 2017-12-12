@@ -33,6 +33,7 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="@dimen/fab_margin"
         app:backgroundTint="@android:color/holo_orange_dark"
+        app:elevation="@dimen/fab_margin"
         app:layout_anchor="@+id/include"
         app:layout_anchorGravity="left|bottom"
         app:srcCompat="@android:drawable/ic_menu_compass"

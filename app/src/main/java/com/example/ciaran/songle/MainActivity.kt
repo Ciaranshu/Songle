@@ -12,9 +12,11 @@ import android.support.v4.content.ContextCompat
 import android.support.v4.view.GravityCompat
 import android.support.v7.app.ActionBarDrawerToggle
 import android.support.v7.app.AppCompatActivity
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.ProgressBar
+import android.widget.Toast
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.location.LocationRequest
@@ -30,8 +32,14 @@ import kotlinx.android.synthetic.main.app_bar_main.*
 import java.net.URL
 
 
+
 import com.google.maps.android.data.kml.KmlLayer
+import com.google.maps.android.data.kml.KmlPlacemark
 import kotlinx.android.synthetic.main.content_main.*
+import org.jetbrains.anko.alert
+import org.jetbrains.anko.yesButton
+import java.io.*
+import java.net.HttpURLConnection
 
 class MainActivity : AppCompatActivity(),
         NavigationView.OnNavigationItemSelectedListener,
@@ -54,7 +62,7 @@ class MainActivity : AppCompatActivity(),
         setSupportActionBar(toolbar)
 
         fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+            Snackbar.make(view, "Game Start!", Snackbar.LENGTH_LONG)
                     .setAction("Action", null).show()
             onGameBegin()
         }
@@ -108,11 +116,20 @@ class MainActivity : AppCompatActivity(),
     }
 
     fun onGameBegin() {
-        progressBar?.max = 1000
+        progressBar?.max = 50
         var refresh = DownloadSongs()
         refresh.progressBar = progressBar
         refresh.context = this
         refresh.execute("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/songs.xml")
+
+
+        var refreshMap = DownloadMap()
+        refreshMap.progressBar = progressBar
+        refreshMap.context = this
+        val layerList = refreshMap.execute(mMap).get()
+        layerList[4].addLayerToMap()
+
+
 
     }
 
@@ -133,7 +150,7 @@ class MainActivity : AppCompatActivity(),
 
     }
 
-    override fun onLocationChanged(current : Location?) {
+    override fun onLocationChanged(current: Location?) {
 
         if (current == null) {
             println("[onLocationChanged] Location unknown")
@@ -144,7 +161,18 @@ class MainActivity : AppCompatActivity(),
 
             ${current.getLongitude()})"""
 
-            ) }
+            )
+
+
+        }
+
+    }
+
+    fun CollectMarker(longitude: Double, latitude: Double):  KmlPlacemark? {
+        var currentMin = 1000000F
+        var currentResult: KmlPlacemark ?= null
+        val results: Float = 0F
+        return currentResult
     }
 
     override fun onConnectionSuspended(ﬂag : Int) {
@@ -177,6 +205,10 @@ class MainActivity : AppCompatActivity(),
         } catch (se : SecurityException) {
             println(">>>>> [$TAG] Security exception thrown [onMapReady]")
         }
+
+
+        //val layer = KmlLayer(mMap, kmlInputStream, this)
+        //layer.addLayerToMap()
 
     }
 
