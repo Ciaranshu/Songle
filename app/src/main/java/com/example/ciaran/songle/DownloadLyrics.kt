@@ -45,7 +45,7 @@ class DownloadLyrics: AsyncTask<String, Int, String>() {
 
         var stream:InputStream = downloadUrl(urlString) // Do something with stream e.g. parse as XML, build result
 
-        return stream.toString()
+        return stream.bufferedReader().use { it.readText() }
     }
 
     @Throws(IOException::class)

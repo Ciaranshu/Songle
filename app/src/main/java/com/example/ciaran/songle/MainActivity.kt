@@ -15,6 +15,7 @@ import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.PopupWindow
 import android.widget.ProgressBar
 import android.widget.Toast
 import com.google.android.gms.common.ConnectionResult
@@ -26,6 +27,7 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.app_bar_main.*
@@ -38,6 +40,8 @@ import com.google.maps.android.data.kml.KmlPlacemark
 import com.google.maps.android.data.kml.KmlPoint
 import kotlinx.android.synthetic.main.content_main.*
 import org.jetbrains.anko.alert
+import org.jetbrains.anko.noButton
+import org.jetbrains.anko.toast
 import org.jetbrains.anko.yesButton
 import java.io.*
 import java.net.HttpURLConnection
@@ -52,15 +56,17 @@ class MainActivity : AppCompatActivity(),
 
     private lateinit var mMap: GoogleMap
     private lateinit var mGoogleApiClient: GoogleApiClient
-    val PERMISSIONS_REQUESR_ACESS_FINE_LOCATION = 1
+    private val PERMISSIONS_REQUESR_ACESS_FINE_LOCATION = 1
     var mLocationPermissionGranted = false 
     private lateinit var mLastLocation : Location
-    val TAG = "MapsActivity"
-    var Markers:Iterable<KmlPlacemark> ?= null
-    var gameStarted:Boolean = false
-    var lyrics:String ?= null
-    var songList:List<Song>? = null
-    var gameMode:Int = 1 // 1:esay mode, 2:moderate mode, 3:hard mode
+    private val TAG = "MapsActivity"
+    private var Markers:MutableList<KmlPlacemark> ?= null
+    private var gameStarted:Boolean = false
+    private var lyrics:String ?= null
+    private var songList:List<Song>? = null
+    var collectedWords:MutableList<String?> ?= null
+    private var gameMode:Int = 1 // 1:esay mode, 2:moderate mode, 3:hard mode
+    var layer:KmlLayer ?= null
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -113,7 +119,7 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    fun createLocationRequest() {
+    private fun createLocationRequest() {
 
         // Set the parameters for the location request
         val mLocationRequest = LocationRequest()
@@ -130,7 +136,7 @@ class MainActivity : AppCompatActivity(),
 
     }
 
-    fun onGameBegin() {
+    private fun onGameBegin() {
         //randomly choose the a song from the song list
         var Num:Int = rand(1,songList!!.size)
         var songNum:String ?= null
@@ -154,12 +160,13 @@ class MainActivity : AppCompatActivity(),
         refreshMap.progressBar = progressBar
         refreshMap.context = this
 
-        var layer:KmlLayer = refreshMap.execute(currenMap).get()
-        layer.addLayerToMap()
-        for (i in layer.containers){
-            this.Markers = i.placemarks
-        }
+        layer = refreshMap.execute(currenMap).get()
+        layer?.addLayerToMap()
 
+
+        for (i in layer!!.containers){
+            this.Markers = i.placemarks.toMutableList()
+        }
 
         //loading the according lyrics
         var refreshLyrics = DownloadLyrics()
@@ -170,14 +177,16 @@ class MainActivity : AppCompatActivity(),
 
     val random = Random()
 
-    fun rand(from: Int, to: Int) : Int {
+    private fun rand(from: Int, to: Int) : Int {
         return random.nextInt(to - from) + from
     }
 
 
     override fun onConnected(connectionHint : Bundle?) {
 
-        try { createLocationRequest(); } catch (ise : IllegalStateException) {
+        try { createLocationRequest();
+
+        } catch (ise : IllegalStateException) {
 
             println("IllegalStateException thrown [onConnected]"); } // Can we access the user’s current location?
 
@@ -199,7 +208,7 @@ class MainActivity : AppCompatActivity(),
         }
         else if (gameStarted == true){
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(current.latitude,current.longitude), 17F))
-            CollectMarker(current.latitude, current.longitude)
+            collectMarker(current.latitude, current.longitude)
         }else {
             println("""[onLocationChanged] Lat/long now
 
@@ -213,14 +222,15 @@ class MainActivity : AppCompatActivity(),
 
     }
 
-    fun CollectMarker(latitude: Double, longitude: Double):  Boolean {
-        var min = 3F //minimum collection distance is 3 meters
+    private fun collectMarker(latitude: Double, longitude: Double):  Boolean {
+        var min = 10F //minimum collection distance is 3 meters
         var markLat:Double = 0.0
         var markLng:Double = 0.0
         var ob: String? = null
         val results = FloatArray(10)
         var lyricsY:Int = 0
         var lyricsX: Int = 0
+
 
         //judge if the distance between current position and any markers is less than the minimum distance for successful collection
         for (i in this.Markers!!){
@@ -232,7 +242,18 @@ class MainActivity : AppCompatActivity(),
                 if (results[0] < min) {
                     lyricsY = i.properties.toList()[0].toString().split("=",":")[1].toInt()
                     lyricsX = i.properties.toList()[0].toString().split("=",":")[2].toInt()
+                    var answer = lyrics?.split('\n')?.get(lyricsY-1)?.split(" ")?.get(lyricsX-1)
+                    alert("you successfully found one word:\n        "+answer) {
+                        title = "Congratulations!"
+                        positiveButton("Collect") {
+                            Markers?.removeAt(Markers!!.indexOf(i))
+                            collectedWords?.add(answer)
+                            toast("Successfully collected!")
+                        }
+                        negativeButton("Skip") { }
+                    }.show()
 
+                    break
                 }
             }
 
