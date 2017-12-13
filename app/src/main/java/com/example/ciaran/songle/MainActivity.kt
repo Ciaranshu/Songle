@@ -1,7 +1,9 @@
 package com.example.ciaran.songle
 
 import android.Manifest
+import android.app.PendingIntent.getActivity
 import android.content.pm.PackageManager
+import android.graphics.BitmapFactory
 import android.location.Location
 import android.location.LocationListener
 import android.os.Bundle
@@ -15,9 +17,11 @@ import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.Button
 import android.widget.PopupWindow
 import android.widget.ProgressBar
 import android.widget.Toast
+import com.example.ciaran.songle.R.id.textView
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.location.LocationRequest
@@ -26,9 +30,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.Marker
-import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.maps.model.*
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.app_bar_main.*
 import java.net.URL
@@ -39,13 +41,13 @@ import com.google.maps.android.data.kml.KmlLayer
 import com.google.maps.android.data.kml.KmlPlacemark
 import com.google.maps.android.data.kml.KmlPoint
 import kotlinx.android.synthetic.main.content_main.*
-import org.jetbrains.anko.alert
-import org.jetbrains.anko.noButton
-import org.jetbrains.anko.toast
-import org.jetbrains.anko.yesButton
+import org.jetbrains.anko.*
+import org.jetbrains.anko.custom.ankoView
+import org.jetbrains.anko.design.textInputEditText
 import java.io.*
 import java.net.HttpURLConnection
 import java.util.*
+import kotlin.collections.ArrayList
 
 class MainActivity : AppCompatActivity(),
         NavigationView.OnNavigationItemSelectedListener,
@@ -60,13 +62,16 @@ class MainActivity : AppCompatActivity(),
     var mLocationPermissionGranted = false 
     private lateinit var mLastLocation : Location
     private val TAG = "MapsActivity"
-    private var Markers:MutableList<KmlPlacemark> ?= null
+    private val MarkerList = mutableListOf<Marker>()
     private var gameStarted:Boolean = false
     private var lyrics:String ?= null
     private var songList:List<Song>? = null
     var collectedWords:MutableList<String?> ?= null
     private var gameMode:Int = 1 // 1:esay mode, 2:moderate mode, 3:hard mode
     var layer:KmlLayer ?= null
+    val random = Random()
+    var answer:String ?= null
+
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -75,12 +80,37 @@ class MainActivity : AppCompatActivity(),
         setSupportActionBar(toolbar)
 
         fab.setOnClickListener { view ->
-            Snackbar.make(view, "Game Start!", Snackbar.LENGTH_LONG)
-                    .setAction("Action", null).show()
+
             if (!gameStarted) {
                 Snackbar.make(view, "Game Start!", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show()
                 onGameBegin()
+            }
+            else{
+                alert {
+                    title = "Have a guess?"
+                    message = "Please enter you answer here:"
+
+                    customView {
+                       var input = textInputEditText()
+                        positiveButton("Confirm") {
+                            if (input.text.toString() == answer){
+                                toast("Correct! Congratulations!")
+                                onGameStop()
+                            }
+                            else{
+                                toast("Guess incorrect!")
+                            }
+                        }
+                        negativeButton("Restart") {
+                            onGameStop()
+                            onGameBegin()
+                        }
+
+                    }
+
+                }.show()
+
             }
         }
 
@@ -139,12 +169,14 @@ class MainActivity : AppCompatActivity(),
     private fun onGameBegin() {
         //randomly choose the a song from the song list
         var Num:Int = rand(1,songList!!.size)
+
         var songNum:String ?= null
         if (Num!! < 10){
             songNum = "0" + Num.toString()
         }else{
             songNum = Num.toString()
         }
+        answer = songList!![Num - 1].title
 
         //randomly choose the option of map
         var option:Int = rand(4,6) - gameMode
@@ -161,11 +193,52 @@ class MainActivity : AppCompatActivity(),
         refreshMap.context = this
 
         layer = refreshMap.execute(currenMap).get()
+
         layer?.addLayerToMap()
+        layer?.removeLayerFromMap()
 
 
-        for (i in layer!!.containers){
-            this.Markers = i.placemarks.toMutableList()
+
+
+
+        for (x in layer!!.containers){
+            for (i in x.placemarks.toList()){
+                if (i.hasGeometry()){
+                    var ob = i.geometry.geometryObject.toString()
+                    var markLat = ob.split("(", ",", ")")[1].toDouble()
+                    var markLng = ob.split("(", ",", ")")[2].toDouble()
+                    var lyricsY = i.properties.toList()[0].toString().split("=",":")[1]
+                    var lyricsX = i.properties.toList()[0].toString().split("=",":")[2]
+                    var catagory = i.properties.toList()[1].toString().split("=")[1]
+                    var icon:BitmapDescriptor ?=null
+
+                    if (catagory == "unclassified"){
+                        icon = BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(resources, R.drawable.pin_unclassified))
+                    }
+                    else if(catagory == "boring"){
+                        icon = BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(resources, R.drawable.pin_boring))
+                    }
+                    else if(catagory == "notboring"){
+                        icon = BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(resources, R.drawable.pin_not_boring))
+                    }
+                    else if(catagory == "interesting"){
+                        icon = BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(resources, R.drawable.pin_intersting))
+                    }
+                    else if(catagory == "veryinteresting"){
+                        icon = BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(resources, R.drawable.pin_very_interesting))
+
+                    }
+                    var marker:Marker = mMap!!.addMarker(MarkerOptions().position(LatLng(markLat,markLng))
+                            .title(catagory)
+                            .draggable(false)
+                            .visible(true).icon(icon).snippet(lyricsY+":"+lyricsX))
+
+                    MarkerList.add(marker)
+
+                }
+
+            }
+
         }
 
         //loading the according lyrics
@@ -175,7 +248,11 @@ class MainActivity : AppCompatActivity(),
 
     }
 
-    val random = Random()
+    private fun onGameStop(){
+        gameStarted = false
+        mMap.clear()
+        MarkerList.clear()
+    }
 
     private fun rand(from: Int, to: Int) : Int {
         return random.nextInt(to - from) + from
@@ -217,36 +294,30 @@ class MainActivity : AppCompatActivity(),
             ${current.getLongitude()})"""
 
             )
-
         }
 
     }
 
-    private fun collectMarker(latitude: Double, longitude: Double):  Boolean {
-        var min = 10F //minimum collection distance is 3 meters
-        var markLat:Double = 0.0
-        var markLng:Double = 0.0
-        var ob: String? = null
+    private fun collectMarker(latitude: Double, longitude: Double) {
+        var min = 10F //minimum collection distance is 10 meters
         val results = FloatArray(10)
         var lyricsY:Int = 0
         var lyricsX: Int = 0
 
 
+
+
         //judge if the distance between current position and any markers is less than the minimum distance for successful collection
-        for (i in this.Markers!!){
-            if (i.hasGeometry()){
-                ob = i.geometry.geometryObject.toString()
-                markLat = ob.split("(", ",", ")")[1].toDouble()
-                markLng = ob.split("(", ",", ")")[2].toDouble()
-                Location.distanceBetween(latitude, longitude, markLat,markLng,results)
+        for (i in this.MarkerList!!){
+            Location.distanceBetween(latitude, longitude, i.position.latitude, i.position.longitude,results)
                 if (results[0] < min) {
-                    lyricsY = i.properties.toList()[0].toString().split("=",":")[1].toInt()
-                    lyricsX = i.properties.toList()[0].toString().split("=",":")[2].toInt()
+                    lyricsY = i.snippet.split(":")[0].toInt()
+                    lyricsX = i.snippet.split(":")[1].toInt()
                     var answer = lyrics?.split('\n')?.get(lyricsY-1)?.split(" ")?.get(lyricsX-1)
                     alert("you successfully found one word:\n        "+answer) {
                         title = "Congratulations!"
                         positiveButton("Collect") {
-                            Markers?.removeAt(Markers!!.indexOf(i))
+                            i.remove()
                             collectedWords?.add(answer)
                             toast("Successfully collected!")
                         }
@@ -255,12 +326,10 @@ class MainActivity : AppCompatActivity(),
 
                     break
                 }
-            }
-
         }
 
-        return false
-    }
+
+}
 
 
 
