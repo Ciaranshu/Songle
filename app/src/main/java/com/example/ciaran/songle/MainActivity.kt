@@ -2,6 +2,7 @@ package com.example.ciaran.songle
 
 import android.Manifest
 import android.app.PendingIntent.getActivity
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.graphics.Color
@@ -9,6 +10,7 @@ import android.location.Location
 import android.location.LocationListener
 import android.os.Build
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.support.annotation.RequiresApi
 import android.support.design.widget.Snackbar
 import android.support.design.widget.NavigationView
@@ -23,8 +25,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.*
-import com.example.ciaran.songle.R.id.textView
-import com.example.ciaran.songle.R.id.timing_switch
+import com.example.ciaran.songle.R.id.*
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.location.LocationRequest
@@ -81,11 +82,13 @@ class MainActivity : AppCompatActivity(),
     var layer:KmlLayer ?= null
     val random = Random()
     var answer:String ?= null
-    lateinit var timelineRecyclerAdapter: TimelineRecyclerAdapter
+    private lateinit var timelineRecyclerAdapter: TimelineRecyclerAdapter
+    private lateinit var countDownTimer: CountDownTimer
 
     private var GAMESTATUS:Boolean = false
     private var GAMEMODE:Int = 1 // 1:esay mode, 2:moderate mode, 3:hard mode
-    private var TIMING:Boolean = false
+    private var TIMING:Boolean = true
+    private var GAMETIME:Long = 60 //1:esay mode: 60 mins , 2:moderate mode: 40 mins, 3:hard mode: 20 mins
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -95,7 +98,8 @@ class MainActivity : AppCompatActivity(),
         timelineRecyclerAdapter = TimelineRecyclerAdapter()
         word_list.layoutManager = LinearLayoutManager(this)
         word_list.adapter = timelineRecyclerAdapter
-        timelineRecyclerAdapter.addWeather(Word("Words will be collected here:","Please enjoy the game!",0,false))
+        timelineRecyclerAdapter.addWeather(Word("Words are collected here:","Please enjoy the game!",0,false))
+        Timer_progress.visibility  = View.INVISIBLE
 
 
         fab.setOnClickListener { view ->
@@ -121,9 +125,8 @@ class MainActivity : AppCompatActivity(),
                                 toast("Guess incorrect!")
                             }
                         }
-                        negativeButton("Restart") {
+                        negativeButton("Give Up!") {
                             onGameStop()
-                            onGameBegin()
                         }
 
                     }
@@ -206,9 +209,7 @@ class MainActivity : AppCompatActivity(),
 
         //loading the maps
         GAMESTATUS = true
-        progressBar?.max = 50
         var refreshMap = DownloadMap()
-        refreshMap.progressBar = progressBar
         refreshMap.context = this
 
         layer = refreshMap.execute(currenMap).get()
@@ -258,7 +259,24 @@ class MainActivity : AppCompatActivity(),
                 }
 
             }
+            if (TIMING) {
+                //set countdown timer
 
+                Timer_progress.visibility = View.VISIBLE
+                Timer_progress.max = (GAMETIME*60).toInt()
+
+                countDownTimer = object : CountDownTimer(GAMETIME * 60 * 1000, 100) {
+                    override fun onTick(millisUntilFinished: Long) {
+                        Timer_progress.progress = (millisUntilFinished / 1000).toInt()
+                        Log.d("Timer", (millisUntilFinished / (1000)).toString())
+                    }
+
+                    override fun onFinish() {
+                        onGameStop()
+                        toast("Time over! Failed to guess the song!")
+                    }
+                }.start()
+            }
         }
 
         //loading the according lyrics
@@ -269,9 +287,11 @@ class MainActivity : AppCompatActivity(),
     }
 
     private fun onGameStop(){
+        Timer_progress.visibility  = View.INVISIBLE
         GAMESTATUS = false
         mMap.clear()
         MarkerList.clear()
+        countDownTimer.cancel()
     }
 
     private fun rand(from: Int, to: Int) : Int {
@@ -348,7 +368,7 @@ class MainActivity : AppCompatActivity(),
 
                             val current = Calendar.getInstance()
 
-                            val time:String = current.get(Calendar.HOUR_OF_DAY).toString()+":"+current.get(Calendar.MINUTE).toString()
+                            val time:String = current.get(Calendar.HOUR_OF_DAY).toString().padStart(2,'0')+":"+current.get(Calendar.MINUTE).toString().padStart(2,'0')
                             val date:String = current.get(Calendar.DAY_OF_MONTH).toString()+"/"+current.get(Calendar.MONTH).toString()
 
                             timelineRecyclerAdapter.addTimepoint(Timepoint(time,date))
@@ -371,10 +391,12 @@ class MainActivity : AppCompatActivity(),
 
     override fun onConnectionSuspended(ﬂag : Int) {
         println(" >>>> onConnectionSuspended")
+        onGameStop()
     }
 
     override fun onConnectionFailed(result : ConnectionResult) {
         println(" >>>> onConnectionFailed")
+        onGameStop()
     }
 
 
@@ -432,6 +454,7 @@ class MainActivity : AppCompatActivity(),
                         run {
                             toast("You are playing with ${modes[i]} mode!")
                             GAMEMODE = i -1
+                            GAMETIME = (GAMEMODE*20).toLong()
                         }
                     })
                 }
@@ -458,7 +481,11 @@ class MainActivity : AppCompatActivity(),
                 }
             }
             
-            R.id.action_settings -> return true
+            R.id.action_settings -> {
+                val intent = Intent(this, SettingsActivity::class.java)
+                startActivity(intent)
+
+            }
             else -> return super.onOptionsItemSelected(item)
         }
         return true
