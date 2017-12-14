@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import android.graphics.Typeface
 import android.location.Location
 import android.location.LocationListener
 import android.os.Build
@@ -126,6 +127,7 @@ class MainActivity : AppCompatActivity(),
                                 onGameStop()
                             }
                             else{
+
                                 toast("Guess incorrect!")
                             }
                         }
@@ -268,11 +270,14 @@ class MainActivity : AppCompatActivity(),
 
                 Timer_progress.visibility = View.VISIBLE
                 Timer_progress.max = (GAMETIME*60).toInt()
-                toast("You got [$GAMETIME] minutes to finish the game!")
+                toast("You got $GAMETIME minutes to finish the game!")
 
                 countDownTimer = object : CountDownTimer(GAMETIME * 60 * 1000, 100) {
                     override fun onTick(millisUntilFinished: Long) {
-                        Timer_progress.progress = (millisUntilFinished / 1000).toInt()
+
+                        Timer_progress.progress = ((millisUntilFinished / 1000)).toInt()
+                        Log.d("Timer", Timer_progress.progress.toString())
+
                         if ((millisUntilFinished / (1000*60)).toInt() == 10){
                             toast("You only got 10 minutes left!")
                         }
@@ -361,7 +366,7 @@ class MainActivity : AppCompatActivity(),
                 if (results[0] < min) {
                     lyricsY = i.snippet.split(":")[0].toInt()
                     lyricsX = i.snippet.split(":")[1].toInt()
-                    var answer = lyrics?.split('\n')?.get(lyricsY-1)?.split(" ", "," ,".")?.get(lyricsX-1)
+                    var answer = lyrics?.split('\n')?.get(lyricsY-1)?.split(" ", ", ", ".")?.get(lyricsX-1)
                     alert("you successfully found one word:\n") {
                         title = "Congratulations!"
                         customView {
@@ -370,6 +375,7 @@ class MainActivity : AppCompatActivity(),
                                 textSize = 23f
                                 textColor = Color.parseColor("#56b994")
                                 gravity = Gravity.CENTER_HORIZONTAL
+                                typeface = Typeface.DEFAULT_BOLD
                             }
 
                             positiveButton("Collect") {
