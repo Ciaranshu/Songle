@@ -4,9 +4,12 @@ import android.Manifest
 import android.app.PendingIntent.getActivity
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.location.Location
 import android.location.LocationListener
+import android.os.Build
 import android.os.Bundle
+import android.support.annotation.RequiresApi
 import android.support.design.widget.Snackbar
 import android.support.design.widget.NavigationView
 import android.support.v4.app.ActivityCompat
@@ -14,14 +17,14 @@ import android.support.v4.content.ContextCompat
 import android.support.v4.view.GravityCompat
 import android.support.v7.app.ActionBarDrawerToggle
 import android.support.v7.app.AppCompatActivity
+import android.support.v7.widget.LinearLayoutManager
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.Button
-import android.widget.PopupWindow
-import android.widget.ProgressBar
-import android.widget.Toast
+import android.view.View
+import android.widget.*
 import com.example.ciaran.songle.R.id.textView
+import com.example.ciaran.songle.R.id.timing_switch
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.location.LocationRequest
@@ -41,11 +44,19 @@ import com.google.maps.android.data.kml.KmlLayer
 import com.google.maps.android.data.kml.KmlPlacemark
 import com.google.maps.android.data.kml.KmlPoint
 import kotlinx.android.synthetic.main.content_main.*
+import kotlinx.android.synthetic.main.nav_header_main.view.*
 import org.jetbrains.anko.*
 import org.jetbrains.anko.custom.ankoView
 import org.jetbrains.anko.design.textInputEditText
+import pl.hypeapp.materialtimelinesample.adapter.TimelineRecyclerAdapter
+import pl.hypeapp.materialtimelinesample.model.Timepoint
+import pl.hypeapp.materialtimelinesample.model.Word
+import pl.hypeapp.materialtimelineview.MaterialTimelineView
 import java.io.*
 import java.net.HttpURLConnection
+import java.text.DateFormat
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -63,25 +74,33 @@ class MainActivity : AppCompatActivity(),
     private lateinit var mLastLocation : Location
     private val TAG = "MapsActivity"
     private val MarkerList = mutableListOf<Marker>()
-    private var gameStarted:Boolean = false
+
     private var lyrics:String ?= null
     private var songList:List<Song>? = null
     var collectedWords:MutableList<String?> ?= null
-    private var gameMode:Int = 1 // 1:esay mode, 2:moderate mode, 3:hard mode
     var layer:KmlLayer ?= null
     val random = Random()
     var answer:String ?= null
+    lateinit var timelineRecyclerAdapter: TimelineRecyclerAdapter
 
+    private var GAMESTATUS:Boolean = false
+    private var GAMEMODE:Int = 1 // 1:esay mode, 2:moderate mode, 3:hard mode
+    private var TIMING:Boolean = false
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
+        timelineRecyclerAdapter = TimelineRecyclerAdapter()
+        word_list.layoutManager = LinearLayoutManager(this)
+        word_list.adapter = timelineRecyclerAdapter
+        timelineRecyclerAdapter.addWeather(Word("Words will be collected here:","Please enjoy the game!",0,false))
+
 
         fab.setOnClickListener { view ->
 
-            if (!gameStarted) {
+            if (!GAMESTATUS) {
                 Snackbar.make(view, "Game Start!", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show()
                 onGameBegin()
@@ -179,14 +198,14 @@ class MainActivity : AppCompatActivity(),
         answer = songList!![Num - 1].title
 
         //randomly choose the option of map
-        var option:Int = rand(4,6) - gameMode
+        var option:Int = rand(4,6) - GAMEMODE
 
 
         //generate current Map object according to songNum and mode option
         var currenMap = Map(mMap,songNum,option)
 
         //loading the maps
-        gameStarted = true
+        GAMESTATUS = true
         progressBar?.max = 50
         var refreshMap = DownloadMap()
         refreshMap.progressBar = progressBar
@@ -214,6 +233,7 @@ class MainActivity : AppCompatActivity(),
 
                     if (catagory == "unclassified"){
                         icon = BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(resources, R.drawable.pin_unclassified))
+
                     }
                     else if(catagory == "boring"){
                         icon = BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(resources, R.drawable.pin_boring))
@@ -231,7 +251,7 @@ class MainActivity : AppCompatActivity(),
                     var marker:Marker = mMap!!.addMarker(MarkerOptions().position(LatLng(markLat,markLng))
                             .title(catagory)
                             .draggable(false)
-                            .visible(true).icon(icon).snippet(lyricsY+":"+lyricsX))
+                            .visible(true).icon(icon).snippet(lyricsY+":"+lyricsX+":"+catagory))
 
                     MarkerList.add(marker)
 
@@ -249,7 +269,7 @@ class MainActivity : AppCompatActivity(),
     }
 
     private fun onGameStop(){
-        gameStarted = false
+        GAMESTATUS = false
         mMap.clear()
         MarkerList.clear()
     }
@@ -283,7 +303,7 @@ class MainActivity : AppCompatActivity(),
         if (current == null) {
             println("[onLocationChanged] Location unknown")
         }
-        else if (gameStarted == true){
+        else if (GAMESTATUS == true){
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(current.latitude,current.longitude), 17F))
             collectMarker(current.latitude, current.longitude)
         }else {
@@ -297,6 +317,7 @@ class MainActivity : AppCompatActivity(),
         }
 
     }
+
 
     private fun collectMarker(latitude: Double, longitude: Double) {
         var min = 10F //minimum collection distance is 10 meters
@@ -313,12 +334,27 @@ class MainActivity : AppCompatActivity(),
                 if (results[0] < min) {
                     lyricsY = i.snippet.split(":")[0].toInt()
                     lyricsX = i.snippet.split(":")[1].toInt()
-                    var answer = lyrics?.split('\n')?.get(lyricsY-1)?.split(" ")?.get(lyricsX-1)
+                    var answer = lyrics?.split('\n')?.get(lyricsY-1)?.split(" ", "," ,".")?.get(lyricsX-1)
                     alert("you successfully found one word:\n        "+answer) {
                         title = "Congratulations!"
                         positiveButton("Collect") {
                             i.remove()
+                            MarkerList.remove(i)
                             collectedWords?.add(answer)
+
+                            val collectWordView = TextView(this@MainActivity)
+                            collectWordView.textSize = 22f
+                            collectWordView.text = answer
+
+                            val current = Calendar.getInstance()
+
+                            val time:String = current.get(Calendar.HOUR_OF_DAY).toString()+":"+current.get(Calendar.MINUTE).toString()
+                            val date:String = current.get(Calendar.DAY_OF_MONTH).toString()+"/"+current.get(Calendar.MONTH).toString()
+
+                            timelineRecyclerAdapter.addTimepoint(Timepoint(time,date))
+                            timelineRecyclerAdapter.addWeather(Word(answer!!,i.snippet.split(":")[2],0,false))
+
+
                             toast("Successfully collected!")
                         }
                         negativeButton("Skip") { }
@@ -389,24 +425,49 @@ class MainActivity : AppCompatActivity(),
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         when (item.itemId) {
+            R.id.game_mode ->{
+                if (!GAMESTATUS){
+                    val modes = listOf("Easy", "Moderate", "Hard")
+                    selector("Please select the game mode:", modes, { dialogInterface, i ->
+                        run {
+                            toast("You are playing with ${modes[i]} mode!")
+                            GAMEMODE = i -1
+                        }
+                    })
+                }
+                else{
+                    toast(("Please change mode after finishing the game!"))
+                    return true
+                }
+
+            }
+
+            R.id.timing_switch -> {
+                if (!GAMESTATUS){
+                    val modes = listOf("Timing", "Not Timing")
+                    selector("Please select the timing mode:", modes, { dialogInterface, i ->
+                        run {
+                            toast("You are playing with ${modes[i]} mode!")
+                            TIMING = i == 0
+                        }
+                    })
+                }
+                else{
+                    toast(("Please change mode after finishing the game!"))
+                    return true
+                }
+            }
+            
             R.id.action_settings -> return true
             else -> return super.onOptionsItemSelected(item)
         }
+        return true
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         // Handle navigation view item clicks here.
         when (item.itemId) {
-            R.id.nav_camera -> {
-                // Handle the camera action
-            }
-            R.id.nav_gallery -> {
 
-            }
-
-            R.id.nav_manage -> {
-
-            }
 
         }
 

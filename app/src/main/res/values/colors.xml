@@ -2,6 +2,10 @@
 <resources>
     <color name="colorPrimary">#3F51B5</color>
     <color name="colorPrimaryDark">#303F9F</color>
-    <color name="colorAccent">#FF4081</color>
+    <color name="colorAccent">#ff4081</color>
     <color name="Green">#56b994</color>
+    <color name="interesting">#f5be25</color>
+    <color name="notboring">#052e67</color>
+    <color name="veryinteresting">@android:color/holo_blue_light</color>
+    <color name="boring">#3e4c5e</color>
 </resources>

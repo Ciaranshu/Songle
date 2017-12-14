@@ -19,17 +19,15 @@
         android:layout_height="match_parent"
         android:layout_gravity="start"
         android:fitsSystemWindows="true"
-   >
+        app:itemBackground="@color/common_google_signin_btn_text_light_default">
 
-        <ScrollView
+
+        <android.support.v7.widget.RecyclerView
+            android:id="@+id/word_list"
             android:layout_width="match_parent"
             android:layout_height="match_parent">
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical" />
-        </ScrollView>
+        </android.support.v7.widget.RecyclerView>
     </android.support.design.widget.NavigationView>
 
 </android.support.v4.widget.DrawerLayout>
