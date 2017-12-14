@@ -303,7 +303,9 @@ class MainActivity : AppCompatActivity(),
         GAMESTATUS = false
         mMap.clear()
         MarkerList.clear()
+        if(TIMING){
         countDownTimer.cancel()
+        }
     }
 
     private fun rand(from: Int, to: Int) : Int {
@@ -476,8 +478,8 @@ class MainActivity : AppCompatActivity(),
                     selector("Please select the game mode:", modes, { dialogInterface, i ->
                         run {
                             toast("You are playing with ${modes[i]} mode!")
-                            GAMEMODE = i -1
-                            GAMETIME = (GAMEMODE*20).toLong()
+                            GAMEMODE = i + 1
+                            GAMETIME = (60 - i*15).toLong()
                         }
                     })
                 }
