@@ -11,6 +11,7 @@ import android.location.LocationListener
 import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
+import android.support.annotation.LayoutRes
 import android.support.annotation.RequiresApi
 import android.support.design.widget.Snackbar
 import android.support.design.widget.NavigationView
@@ -21,6 +22,7 @@ import android.support.v7.app.ActionBarDrawerToggle
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
 import android.util.Log
+import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -45,10 +47,12 @@ import com.google.maps.android.data.kml.KmlLayer
 import com.google.maps.android.data.kml.KmlPlacemark
 import com.google.maps.android.data.kml.KmlPoint
 import kotlinx.android.synthetic.main.content_main.*
+import kotlinx.android.synthetic.main.nav_header_main.*
 import kotlinx.android.synthetic.main.nav_header_main.view.*
 import org.jetbrains.anko.*
 import org.jetbrains.anko.custom.ankoView
 import org.jetbrains.anko.design.textInputEditText
+import org.w3c.dom.Text
 import pl.hypeapp.materialtimelinesample.adapter.TimelineRecyclerAdapter
 import pl.hypeapp.materialtimelinesample.model.Timepoint
 import pl.hypeapp.materialtimelinesample.model.Word
@@ -264,11 +268,14 @@ class MainActivity : AppCompatActivity(),
 
                 Timer_progress.visibility = View.VISIBLE
                 Timer_progress.max = (GAMETIME*60).toInt()
+                toast("You got [$GAMETIME] minutes to finish the game!")
 
                 countDownTimer = object : CountDownTimer(GAMETIME * 60 * 1000, 100) {
                     override fun onTick(millisUntilFinished: Long) {
                         Timer_progress.progress = (millisUntilFinished / 1000).toInt()
-                        Log.d("Timer", (millisUntilFinished / (1000)).toString())
+                        if ((millisUntilFinished / (1000*60)).toInt() == 10){
+                            toast("You only got 10 minutes left!")
+                        }
                     }
 
                     override fun onFinish() {
@@ -355,29 +362,39 @@ class MainActivity : AppCompatActivity(),
                     lyricsY = i.snippet.split(":")[0].toInt()
                     lyricsX = i.snippet.split(":")[1].toInt()
                     var answer = lyrics?.split('\n')?.get(lyricsY-1)?.split(" ", "," ,".")?.get(lyricsX-1)
-                    alert("you successfully found one word:\n        "+answer) {
+                    alert("you successfully found one word:\n") {
                         title = "Congratulations!"
-                        positiveButton("Collect") {
-                            i.remove()
-                            MarkerList.remove(i)
-                            collectedWords?.add(answer)
+                        customView {
+                            textView {
+                                text = answer
+                                textSize = 23f
+                                textColor = Color.parseColor("#56b994")
+                                gravity = Gravity.CENTER_HORIZONTAL
+                            }
 
-                            val collectWordView = TextView(this@MainActivity)
-                            collectWordView.textSize = 22f
-                            collectWordView.text = answer
+                            positiveButton("Collect") {
+                                i.remove()
+                                MarkerList.remove(i)
+                                collectedWords?.add(answer)
 
-                            val current = Calendar.getInstance()
+                                val collectWordView = TextView(this@MainActivity)
+                                collectWordView.textSize = 22f
+                                collectWordView.text = answer
 
-                            val time:String = current.get(Calendar.HOUR_OF_DAY).toString().padStart(2,'0')+":"+current.get(Calendar.MINUTE).toString().padStart(2,'0')
-                            val date:String = current.get(Calendar.DAY_OF_MONTH).toString()+"/"+current.get(Calendar.MONTH).toString()
+                                val current = Calendar.getInstance()
 
-                            timelineRecyclerAdapter.addTimepoint(Timepoint(time,date))
-                            timelineRecyclerAdapter.addWeather(Word(answer!!,i.snippet.split(":")[2],0,false))
+                                val time: String = current.get(Calendar.HOUR_OF_DAY).toString().padStart(2, '0') + ":" + current.get(Calendar.MINUTE).toString().padStart(2, '0')
+                                val date: String = current.get(Calendar.DAY_OF_MONTH).toString() + "/" + current.get(Calendar.MONTH).toString()
+
+                                timelineRecyclerAdapter.addTimepoint(Timepoint(time, date))
+                                timelineRecyclerAdapter.addWeather(Word(answer!!, i.snippet.split(":")[2], 0, false))
 
 
-                            toast("Successfully collected!")
+                                toast("Successfully collected!")
+                            }
+                            negativeButton("Skip") { toast("Maybe collect it later!")}
+
                         }
-                        negativeButton("Skip") { }
                     }.show()
 
                     break

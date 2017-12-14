@@ -31,7 +31,8 @@ dependencies {
     compile 'com.google.android.gms:play-services-location:11.4.2'
     compile 'com.google.maps.android:android-maps-utils:0.5+'
     compile 'com.github.zawadz88.materialpopupmenu:material-popup-menu:1.0.0'
-    compile 'org.jetbrains.anko:anko-sqlite:0.10.3'
+    compile "org.jetbrains.anko:anko-sdk25:0.10.3"
+    compile "org.jetbrains.anko:anko-appcompat-v7:0.10.3"
     compile "org.jetbrains.anko:anko-commons:0.10.3"
     compile "org.jetbrains.anko:anko-design:0.10.3"
     implementation 'pl.hypeapp:materialtimelineview:1.0'
