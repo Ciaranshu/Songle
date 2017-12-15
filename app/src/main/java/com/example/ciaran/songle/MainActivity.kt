@@ -53,15 +53,14 @@ class MainActivity : AppCompatActivity(),
     private lateinit var mMap: GoogleMap
     private lateinit var mGoogleApiClient: GoogleApiClient
     private val PERMISSIONS_REQUESR_ACESS_FINE_LOCATION = 1
-    private val TAG = "MapsActivity"
+    private val TAG = "MapsActivity" // for logging
     private val markerList = mutableListOf<Marker>()
 
-    private var lyrics:String ?= null
-    private var songList:List<Song>? = null
-    private var collectedWords:MutableList<String?> ?= null
+    private var lyrics:String ?= null // store the whole lyrics of a given song
+    private var songList:List<Song>? = null //store all available songs
     private var layer:KmlLayer ?= null
     private val random = Random()
-    private var answer:String ?= null
+    private var answer:String ?= null //store the answer of song name
     private lateinit var timelineRecyclerAdapter: TimelineRecyclerAdapter
     private lateinit var countDownTimer: CountDownTimer
 
@@ -77,20 +76,15 @@ class MainActivity : AppCompatActivity(),
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
 
-        timelineRecyclerAdapter = TimelineRecyclerAdapter()
-        word_list.layoutManager = LinearLayoutManager(this)
-        word_list.adapter = timelineRecyclerAdapter
-        timelineRecyclerAdapter.addWeather(Word("Words are collected here:","Please enjoy the game!",false))
-
-        Timer_progress.visibility  = View.INVISIBLE
+        createTimeline() // create the time line for word collection
+        Timer_progress.visibility  = View.INVISIBLE // make the progress bar invisible
 
 
+        //use the floating button to start and end game
         fab.setOnClickListener { view ->
 
             if (!GAMESTATUS) {
-                Snackbar.make(view, "Game Start!", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show()
-                onGameBegin()
+                onGameBegin() // Start game when it hasn't started
             }
             else{
                 alert {
@@ -102,15 +96,14 @@ class MainActivity : AppCompatActivity(),
                         positiveButton("Confirm") {
                             if (input.text.toString() == answer){
                                 toast("Correct! Congratulations!")
-                                onGameStop()
+                                onGameStop() // if guess is correct, game stops
                             }
                             else{
-
-                                toast("Guess incorrect!")
+                                toast("Guess incorrect!") // if guess is wrong, game resumes
                             }
                         }
                         negativeButton("Give Up!") {
-                            onGameStop()
+                            onGameStop() // End game when it has started
                         }
 
                     }
@@ -142,6 +135,8 @@ class MainActivity : AppCompatActivity(),
     override fun onStart() {
         super.onStart()
         mGoogleApiClient.connect()
+
+        // refresh the list of available songs when application starts each time
         var refresh = DownloadSongs()
         refresh.context = this
         songList = refresh.execute("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/songs.xml").get()
@@ -155,120 +150,28 @@ class MainActivity : AppCompatActivity(),
         }
     }
 
-    private fun createLocationRequest() {
 
-        // Set the parameters for the location request
-        val mLocationRequest = LocationRequest()
-            mLocationRequest.interval = 5000 // preferably every 5 seconds
-            mLocationRequest.fastestInterval = 1000 // at most every second
-            mLocationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-
-        // Can we access the user’s current location?
-
-        val permissionCheck = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
-        if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
-            LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient,mLocationRequest,this)
-        }
-
-    }
-
+    // Game logic
     private fun onGameBegin() {
-        //randomly choose the a song from the song list
-        var Num:Int = rand(1,songList!!.size)
-
-        var songNum: String?
-        if (Num < 10){
-            songNum = "0" + Num.toString()
-        }else{
-            songNum = Num.toString()
-        }
-        answer = songList!![Num - 1].title
+        //randomly choose a song from the song list
+        val songNum = chooseSong()
 
         //randomly choose the option of map
         var option:Int = rand(4,6) - GAMEMODE
 
-
         //generate current Map object according to songNum and mode option
         var currenMap = Map(mMap,songNum,option)
 
-        //loading the maps
-        GAMESTATUS = true
-        var refreshMap = DownloadMap()
-        refreshMap.context = this
+        //load the maps
+        loadMap (currenMap)
 
-        layer = refreshMap.execute(currenMap).get()
+        //parse to marker
+        parseToMarkers()
 
-        layer?.addLayerToMap()
-        layer?.removeLayerFromMap()
+        //set Timer
+        setTimer()
 
-
-
-
-
-        for (x in layer!!.containers){
-            for (i in x.placemarks.toList()){
-                if (i.hasGeometry()){
-                    var ob = i.geometry.geometryObject.toString()
-                    var markLat = ob.split("(", ",", ")")[1].toDouble()
-                    var markLng = ob.split("(", ",", ")")[2].toDouble()
-                    var lyricsY = i.properties.toList()[0].toString().split("=",":")[1]
-                    var lyricsX = i.properties.toList()[0].toString().split("=",":")[2]
-                    var catagory = i.properties.toList()[1].toString().split("=")[1]
-                    var icon:BitmapDescriptor ?=null
-
-                    if (catagory == "unclassified"){
-                        icon = BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(resources, R.drawable.pin_unclassified))
-
-                    }
-                    else if(catagory == "boring"){
-                        icon = BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(resources, R.drawable.pin_boring))
-                    }
-                    else if(catagory == "notboring"){
-                        icon = BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(resources, R.drawable.pin_not_boring))
-                    }
-                    else if(catagory == "interesting"){
-                        icon = BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(resources, R.drawable.pin_intersting))
-                    }
-                    else if(catagory == "veryinteresting"){
-                        icon = BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(resources, R.drawable.pin_very_interesting))
-
-                    }
-                    var marker:Marker = mMap.addMarker(MarkerOptions().position(LatLng(markLat,markLng))
-                            .title(catagory)
-                            .draggable(false)
-                            .visible(true).icon(icon).snippet(lyricsY+":"+lyricsX+":"+catagory))
-
-                    markerList.add(marker)
-
-                }
-
-            }
-            if (TIMING) {
-                //set countdown timer
-
-                Timer_progress.visibility = View.VISIBLE
-                Timer_progress.max = (GAMETIME*60).toInt()
-                toast("You got $GAMETIME minutes to finish the game!")
-
-                countDownTimer = object : CountDownTimer(GAMETIME * 60 * 1000, 100) {
-                    override fun onTick(millisUntilFinished: Long) {
-
-                        Timer_progress.progress = ((millisUntilFinished / 1000)).toInt()
-
-                        if ((millisUntilFinished / (1000*60)).toInt() == 10){
-                            toast("You only got 10 minutes left!")
-                        }
-                    }
-
-                    override fun onFinish() {
-                        onGameStop()
-                        toast("Time over! Failed to guess the song!")
-                    }
-                }.start()
-            }
-        }
-
-        //loading the according lyrics
+        //loading the lyrics accord to selected song
         var refreshLyrics = DownloadLyrics()
         refreshLyrics.context = this
         lyrics  = refreshLyrics.execute("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+songNum+"/lyrics.txt").get()
@@ -276,27 +179,136 @@ class MainActivity : AppCompatActivity(),
     }
 
     private fun onGameStop(){
-        Timer_progress.visibility  = View.INVISIBLE
+        Timer_progress.visibility  = View.INVISIBLE 
         GAMESTATUS = false
-        mMap.clear()
-        markerList.clear()
+        mMap.clear()    //clear the markers on map
+        markerList.clear()   //clear the marker list
+        createTimeline()
         if(TIMING){
-        countDownTimer.cancel()
+        countDownTimer.cancel() //reset the timer
         }
 
-        timelineRecyclerAdapter = TimelineRecyclerAdapter()
-        word_list.layoutManager = LinearLayoutManager(this)
-        word_list.adapter = timelineRecyclerAdapter
-        timelineRecyclerAdapter.addWeather(Word("Words are collected here:","Please enjoy the game!",false))
 
 
     }
-
+    
+    // generate random number from specfic range
     private fun rand(from: Int, to: Int) : Int {
         return random.nextInt(to - from) + from
     }
 
+    //randomly choose a song from song list
+    private fun chooseSong() : String {
+        var Num:Int = rand(1,songList!!.size)
 
+        var songNum: String?
+        if (Num < 10){
+            songNum = Num.toString().padStart(2,'0')
+        }else{
+            songNum = Num.toString()
+        }
+        
+        //acquire the name of selected song as the answer 
+        answer = songList!![Num - 1].title
+
+        return songNum
+
+    }
+
+    private fun loadMap(map:Map){
+        GAMESTATUS = true
+        
+        //load map according to the attribute of Map object
+        var refreshMap = DownloadMap()
+        refreshMap.context = this
+        layer = refreshMap.execute(map).get() 
+
+        layer?.addLayerToMap()
+        layer?.removeLayerFromMap()
+
+    }
+
+    private fun parseToMarkers() {
+        for (x in layer!!.containers) {
+            for (i in x.placemarks.toList()) {
+                if (i.hasGeometry()) {
+                    val ob = i.geometry.geometryObject.toString()
+                    val markLat = ob.split("(", ",", ")")[1].toDouble()
+                    val markLng = ob.split("(", ",", ")")[2].toDouble()
+                    val lyricsY = i.properties.toList()[0].toString().split("=", ":")[1] // acquire the number of given line
+                    val lyricsX = i.properties.toList()[0].toString().split("=", ":")[2] // acquire the number of given word
+                    val description = i.properties.toList()[1].toString().split("=")[1] //acquire the description of given word
+                    var icon: BitmapDescriptor? = null
+
+                    // change the icon of marker according to its description
+                    if (description == "unclassified") {
+                        icon = BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(resources, R.drawable.pin_unclassified))
+                        
+                    } else if (description == "boring") {
+                        icon = BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(resources, R.drawable.pin_boring))
+                        
+                    } else if (description == "notboring") {
+                        icon = BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(resources, R.drawable.pin_not_boring))
+                        
+                    } else if (description == "interesting") {
+                        icon = BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(resources, R.drawable.pin_intersting))
+                        
+                    } else if (description == "veryinteresting") {
+                        icon = BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(resources, R.drawable.pin_very_interesting))
+
+                    }
+
+                    // add markes to the map and store the return value of addMarker function into markerList as reference
+                    var marker: Marker = mMap.addMarker(MarkerOptions().position(LatLng(markLat, markLng))
+                            .title(description)
+                            .draggable(false)
+                            .visible(true).icon(icon).snippet(lyricsY + ":" + lyricsX + ":" + description))
+
+                    markerList.add(marker)
+
+                }
+
+            }
+
+        }
+    }
+
+    private fun setTimer(){
+        if (TIMING) {
+            //set countdown timer
+
+            Timer_progress.visibility = View.VISIBLE
+            Timer_progress.max = (GAMETIME*60).toInt() // accroding to the difficulty mode
+            toast("You got $GAMETIME minutes to finish the game!")
+
+            countDownTimer = object : CountDownTimer(GAMETIME * 60 * 1000, 100) {
+                override fun onTick(millisUntilFinished: Long) {
+
+                    Timer_progress.progress = ((millisUntilFinished / 1000)).toInt()
+
+                    if ((millisUntilFinished / (1000*60)).toInt() == 10){
+                        toast("You only got 10 minutes left!") // notify user when it's only 10 minutes left
+                    }
+                }
+
+                override fun onFinish() {
+                    onGameStop() //stop the game when time ups
+                    toast("Time over! Failed to guess the song!")
+                }
+            }.start()
+        }
+    }
+
+    //create the timeline view for storage of collected word
+    private fun createTimeline(){
+        timelineRecyclerAdapter = TimelineRecyclerAdapter()
+        word_list.layoutManager = LinearLayoutManager(this)
+        word_list.adapter = timelineRecyclerAdapter
+
+        timelineRecyclerAdapter.addWeather(Word("Words are collected here:","Please enjoy the game!",false))
+    }
+
+    //functions regarding network connection and  google map service
     override fun onConnected(connectionHint : Bundle?) {
 
         try { createLocationRequest();
@@ -317,13 +329,16 @@ class MainActivity : AppCompatActivity(),
 
     override fun onLocationChanged(current: Location?) {
 
-
         if (current == null) {
             println("[onLocationChanged] Location unknown")
         }
+        // if game has started,
         else if (GAMESTATUS == true){
+            //automatically move the camera to track the position of user
             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(current.latitude,current.longitude), 17F))
-            collectMarker(current.latitude, current.longitude)
+
+            //check if there is any word can be collected at current position
+            collectWords(current.latitude, current.longitude)
         }else {
             println("""[onLocationChanged] Lat/long now
 
@@ -336,18 +351,19 @@ class MainActivity : AppCompatActivity(),
 
     }
 
-
-    private fun collectMarker(latitude: Double, longitude: Double) {
+    private fun collectWords(latitude: Double, longitude: Double) {
         val min = 15F //minimum collection distance is 15 meters
         val results = FloatArray(10)
 
         //judge if the distance between current position and any markers is less than the minimum distance for successful collection
         for (i in this.markerList){
+            //get the estimate distance from user to each markers
             Location.distanceBetween(latitude, longitude, i.position.latitude, i.position.longitude,results)
+                //if any distance is less than preset minimum value, notify user to collect
                 if (results[0] < min) {
-                    val lyricsY = i.snippet.split(":")[0].toInt()
-                    val lyricsX = i.snippet.split(":")[1].toInt()
-                    var answer = lyrics?.split('\n')?.get(lyricsY-1)?.split(" ", ", ", ".")?.get(lyricsX-1)
+                    val lyricsY = i.snippet.split(":")[0].toInt() // number of line
+                    val lyricsX = i.snippet.split(":")[1].toInt() // number of word
+                    var answer = lyrics?.split('\n')?.get(lyricsY-1)?.split(" ", ", ", ".")?.get(lyricsX-1) // collected word
                     alert("you successfully found one word:\n") {
                         title = "Congratulations!"
                         customView {
@@ -362,7 +378,6 @@ class MainActivity : AppCompatActivity(),
                             positiveButton("Collect") {
                                 i.remove()
                                 markerList.remove(i)
-                                collectedWords?.add(answer)
 
                                 val collectWordView = TextView(this@MainActivity)
                                 collectWordView.textSize = 22f
@@ -373,9 +388,9 @@ class MainActivity : AppCompatActivity(),
                                 val time: String = current.get(Calendar.HOUR_OF_DAY).toString().padStart(2, '0') + ":" + current.get(Calendar.MINUTE).toString().padStart(2, '0')
                                 val date: String = current.get(Calendar.DAY_OF_MONTH).toString() + "/" + (current.get(Calendar.MONTH)+1).toString()
 
+                                //add collected word to the timeline view
                                 timelineRecyclerAdapter.addTimepoint(Timepoint(time, date))
                                 timelineRecyclerAdapter.addWeather(Word(answer!!, i.snippet.split(":")[2], false))
-
 
                                 toast("Successfully collected!")
                             }
@@ -391,7 +406,22 @@ class MainActivity : AppCompatActivity(),
 
 }
 
+    private fun createLocationRequest() {
 
+        // Set the parameters for the location request
+        val mLocationRequest = LocationRequest()
+        mLocationRequest.interval = 5000 // preferably every 5 seconds
+        mLocationRequest.fastestInterval = 1000 // at most every second
+        mLocationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+
+        // check if we can access the user’s current location
+
+        val permissionCheck = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION);
+        if (permissionCheck == PackageManager.PERMISSION_GRANTED) {
+            LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient,mLocationRequest,this)
+        }
+
+    }
 
     override fun onConnectionSuspended(ﬂag : Int) {
         println(" >>>> onConnectionSuspended")
@@ -402,7 +432,6 @@ class MainActivity : AppCompatActivity(),
         println(" >>>> onConnectionFailed")
         onGameStop()
     }
-
 
     override fun onMapReady(googleMap: GoogleMap) {
         println(">>>>> [$TAG] onMapReady")
@@ -432,6 +461,7 @@ class MainActivity : AppCompatActivity(),
 
     }
 
+    //userinterface logics
     override fun onBackPressed() {
         if (drawer_layout.isDrawerOpen(GravityCompat.START)) {
             drawer_layout.closeDrawer(GravityCompat.START)
