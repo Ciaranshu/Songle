@@ -1,19 +1,14 @@
 package com.example.ciaran.songle
 
 import android.Manifest
-import android.app.PendingIntent.getActivity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Typeface
 import android.location.Location
-import android.location.LocationListener
-import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
-import android.support.annotation.LayoutRes
-import android.support.annotation.RequiresApi
 import android.support.design.widget.Snackbar
 import android.support.design.widget.NavigationView
 import android.support.v4.app.ActivityCompat
@@ -22,13 +17,11 @@ import android.support.v4.view.GravityCompat
 import android.support.v7.app.ActionBarDrawerToggle
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.LinearLayoutManager
-import android.util.Log
 import android.view.Gravity
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.*
-import com.example.ciaran.songle.R.id.*
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.api.GoogleApiClient
 import com.google.android.gms.location.LocationRequest
@@ -40,31 +33,15 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.*
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.android.synthetic.main.app_bar_main.*
-import java.net.URL
-
-
-
 import com.google.maps.android.data.kml.KmlLayer
-import com.google.maps.android.data.kml.KmlPlacemark
-import com.google.maps.android.data.kml.KmlPoint
 import kotlinx.android.synthetic.main.content_main.*
-import kotlinx.android.synthetic.main.nav_header_main.*
-import kotlinx.android.synthetic.main.nav_header_main.view.*
 import org.jetbrains.anko.*
-import org.jetbrains.anko.custom.ankoView
 import org.jetbrains.anko.design.textInputEditText
-import org.w3c.dom.Text
 import pl.hypeapp.materialtimelinesample.adapter.TimelineRecyclerAdapter
 import pl.hypeapp.materialtimelinesample.model.Timepoint
 import pl.hypeapp.materialtimelinesample.model.Word
-import pl.hypeapp.materialtimelineview.MaterialTimelineView
-import java.io.*
-import java.net.HttpURLConnection
-import java.text.DateFormat
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.util.*
-import kotlin.collections.ArrayList
+
 
 class MainActivity : AppCompatActivity(),
         NavigationView.OnNavigationItemSelectedListener,
@@ -76,34 +53,35 @@ class MainActivity : AppCompatActivity(),
     private lateinit var mMap: GoogleMap
     private lateinit var mGoogleApiClient: GoogleApiClient
     private val PERMISSIONS_REQUESR_ACESS_FINE_LOCATION = 1
-    var mLocationPermissionGranted = false 
-    private lateinit var mLastLocation : Location
     private val TAG = "MapsActivity"
-    private val MarkerList = mutableListOf<Marker>()
+    private val markerList = mutableListOf<Marker>()
 
     private var lyrics:String ?= null
     private var songList:List<Song>? = null
-    var collectedWords:MutableList<String?> ?= null
-    var layer:KmlLayer ?= null
-    val random = Random()
-    var answer:String ?= null
+    private var collectedWords:MutableList<String?> ?= null
+    private var layer:KmlLayer ?= null
+    private val random = Random()
+    private var answer:String ?= null
     private lateinit var timelineRecyclerAdapter: TimelineRecyclerAdapter
     private lateinit var countDownTimer: CountDownTimer
 
-    private var GAMESTATUS:Boolean = false
+    //FLAG values of game status
+    private var GAMESTATUS:Boolean = false // True: Game started, False: Game stopped
     private var GAMEMODE:Int = 1 // 1:esay mode, 2:moderate mode, 3:hard mode
-    private var TIMING:Boolean = true
-    private var GAMETIME:Long = 60 //1:esay mode: 60 mins , 2:moderate mode: 40 mins, 3:hard mode: 20 mins
+    private var TIMING:Boolean = true //True: Timing mode, False: Not Timing mode
+    private var GAMETIME:Long = 60 //1:esay mode: 60 mins , 2:moderate mode: 45 mins, 3:hard mode: 30 mins
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         setSupportActionBar(toolbar)
+
         timelineRecyclerAdapter = TimelineRecyclerAdapter()
         word_list.layoutManager = LinearLayoutManager(this)
         word_list.adapter = timelineRecyclerAdapter
-        timelineRecyclerAdapter.addWeather(Word("Words are collected here:","Please enjoy the game!",0,false))
+        timelineRecyclerAdapter.addWeather(Word("Words are collected here:","Please enjoy the game!",false))
+
         Timer_progress.visibility  = View.INVISIBLE
 
 
@@ -198,8 +176,8 @@ class MainActivity : AppCompatActivity(),
         //randomly choose the a song from the song list
         var Num:Int = rand(1,songList!!.size)
 
-        var songNum:String ?= null
-        if (Num!! < 10){
+        var songNum: String?
+        if (Num < 10){
             songNum = "0" + Num.toString()
         }else{
             songNum = Num.toString()
@@ -255,12 +233,12 @@ class MainActivity : AppCompatActivity(),
                         icon = BitmapDescriptorFactory.fromBitmap(BitmapFactory.decodeResource(resources, R.drawable.pin_very_interesting))
 
                     }
-                    var marker:Marker = mMap!!.addMarker(MarkerOptions().position(LatLng(markLat,markLng))
+                    var marker:Marker = mMap.addMarker(MarkerOptions().position(LatLng(markLat,markLng))
                             .title(catagory)
                             .draggable(false)
                             .visible(true).icon(icon).snippet(lyricsY+":"+lyricsX+":"+catagory))
 
-                    MarkerList.add(marker)
+                    markerList.add(marker)
 
                 }
 
@@ -276,7 +254,6 @@ class MainActivity : AppCompatActivity(),
                     override fun onTick(millisUntilFinished: Long) {
 
                         Timer_progress.progress = ((millisUntilFinished / 1000)).toInt()
-                        Log.d("Timer", Timer_progress.progress.toString())
 
                         if ((millisUntilFinished / (1000*60)).toInt() == 10){
                             toast("You only got 10 minutes left!")
@@ -302,10 +279,17 @@ class MainActivity : AppCompatActivity(),
         Timer_progress.visibility  = View.INVISIBLE
         GAMESTATUS = false
         mMap.clear()
-        MarkerList.clear()
+        markerList.clear()
         if(TIMING){
         countDownTimer.cancel()
         }
+
+        timelineRecyclerAdapter = TimelineRecyclerAdapter()
+        word_list.layoutManager = LinearLayoutManager(this)
+        word_list.adapter = timelineRecyclerAdapter
+        timelineRecyclerAdapter.addWeather(Word("Words are collected here:","Please enjoy the game!",false))
+
+
     }
 
     private fun rand(from: Int, to: Int) : Int {
@@ -354,20 +338,15 @@ class MainActivity : AppCompatActivity(),
 
 
     private fun collectMarker(latitude: Double, longitude: Double) {
-        var min = 10F //minimum collection distance is 10 meters
+        val min = 15F //minimum collection distance is 15 meters
         val results = FloatArray(10)
-        var lyricsY:Int = 0
-        var lyricsX: Int = 0
-
-
-
 
         //judge if the distance between current position and any markers is less than the minimum distance for successful collection
-        for (i in this.MarkerList!!){
+        for (i in this.markerList){
             Location.distanceBetween(latitude, longitude, i.position.latitude, i.position.longitude,results)
                 if (results[0] < min) {
-                    lyricsY = i.snippet.split(":")[0].toInt()
-                    lyricsX = i.snippet.split(":")[1].toInt()
+                    val lyricsY = i.snippet.split(":")[0].toInt()
+                    val lyricsX = i.snippet.split(":")[1].toInt()
                     var answer = lyrics?.split('\n')?.get(lyricsY-1)?.split(" ", ", ", ".")?.get(lyricsX-1)
                     alert("you successfully found one word:\n") {
                         title = "Congratulations!"
@@ -382,7 +361,7 @@ class MainActivity : AppCompatActivity(),
 
                             positiveButton("Collect") {
                                 i.remove()
-                                MarkerList.remove(i)
+                                markerList.remove(i)
                                 collectedWords?.add(answer)
 
                                 val collectWordView = TextView(this@MainActivity)
@@ -392,10 +371,10 @@ class MainActivity : AppCompatActivity(),
                                 val current = Calendar.getInstance()
 
                                 val time: String = current.get(Calendar.HOUR_OF_DAY).toString().padStart(2, '0') + ":" + current.get(Calendar.MINUTE).toString().padStart(2, '0')
-                                val date: String = current.get(Calendar.DAY_OF_MONTH).toString() + "/" + current.get(Calendar.MONTH).toString()
+                                val date: String = current.get(Calendar.DAY_OF_MONTH).toString() + "/" + (current.get(Calendar.MONTH)+1).toString()
 
                                 timelineRecyclerAdapter.addTimepoint(Timepoint(time, date))
-                                timelineRecyclerAdapter.addWeather(Word(answer!!, i.snippet.split(":")[2], 0, false))
+                                timelineRecyclerAdapter.addWeather(Word(answer!!, i.snippet.split(":")[2], false))
 
 
                                 toast("Successfully collected!")

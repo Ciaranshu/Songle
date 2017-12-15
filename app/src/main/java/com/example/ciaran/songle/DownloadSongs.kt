@@ -3,7 +3,6 @@ package com.example.ciaran.songle
 import android.content.Context
 import android.os.AsyncTask
 import android.util.Log
-import android.widget.ProgressBar
 import android.widget.Toast
 import org.xmlpull.v1.XmlPullParserException
 import java.io.IOException
@@ -15,17 +14,15 @@ import java.net.URL
  * Created by ciaran on 11/12/2017.
  */
 class DownloadSongs: AsyncTask<String, Int, List<Song>>() {
-    var progressBar: ProgressBar? = null
-    var context: Context? = null
-    //任务执行之前开始调用此方法，可以在这里显示进度对话框。
 
+    var context: Context? = null
 
     override fun onPreExecute() {
         super.onPreExecute()
         Log.d("DownloadXml", "Start")
 
     }
-    //此方法在后台线程 执行，完成任务的主要工作，通常需要较长的时间。
+
     override fun doInBackground(vararg urls: String): List<Song>? {
         Log.d("DownloadXml", "Inbackground")
         return loadXmlFromNetwork(urls[0])
@@ -36,14 +33,13 @@ class DownloadSongs: AsyncTask<String, Int, List<Song>>() {
         val Songlist = SongsListParser()
         var songs: List<Song>?=null
         try {
-            var stream:InputStream = downloadUrl(urlString) // Do something with stream e.g. parse as XML, build result
-            songs = Songlist.parse(stream)
+            var stream:InputStream = downloadUrl(urlString) // Get the stream of the XML file from the given URL
+            songs = Songlist.parse(stream) // Parse the stream of XML file into a list of song with SongListParser
         } catch (e: IOException) {
-            "Unable to load content. Check your network connection"
+            Log.d("DownloadSongs","Unable to load content. Check your network connection")
         } catch (e: XmlPullParserException) {
-            "Error parsing XML"
+            Log.d("DownloadSongs", "Error parsing XML")
         }
-
 
         return songs
     }
@@ -66,19 +62,11 @@ class DownloadSongs: AsyncTask<String, Int, List<Song>>() {
 
     }
 
-
-    //更新UI
-    override fun onProgressUpdate(vararg values: Int?) {
-        super.onProgressUpdate(*values)
-
-        //若有复杂逻辑，可以增加异常捕捉
-        progressBar?.progress = values?.get(0) ?: 0
-    }
-
-    //任务执行完了后执行
+    //Execute when the task is done
     override fun onPostExecute(result: List<Song>?) {
         super.onPostExecute(result)
 
+        //Notify the user that songs have been download successfully
         Toast.makeText(context,"Finish Loading Songs",Toast.LENGTH_LONG).show()
     }
 }

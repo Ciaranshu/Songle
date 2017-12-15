@@ -1,28 +1,14 @@
 package com.example.ciaran.songle
 
-import android.annotation.SuppressLint
 import android.content.Context
 import android.os.AsyncTask
-import android.os.Parcel
-import android.os.Parcelable
 import android.util.Log
-import android.widget.ProgressBar
 import android.widget.Toast
-import com.google.android.gms.common.api.GoogleApiClient
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.data.Layer
 import com.google.maps.android.data.kml.KmlLayer
-import org.xmlpull.v1.XmlPullParserException
-import java.io.File
-import java.io.FileInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
-
 
 
 /**
@@ -30,34 +16,30 @@ import java.net.URL
  */
 class DownloadMap() : AsyncTask<Map, Int, KmlLayer>() {
 
-    var progressBar: ProgressBar? = null
-    @SuppressLint("StaticFieldLeak")
     var context: Context? = null
 
 
-    override fun doInBackground(vararg params: Map?): KmlLayer {
-        Log.d("DownloadXml", "Inbackground")
-
-        var kmlInputStream =loadXmlFromNetwork("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+params[0]?.Num+"/map"+params[0]?.option.toString()+".kml")
-        var layer = KmlLayer(params[0]?.map, kmlInputStream, context)
-
-
-        return layer
-    }
-
-
-    //任务执行之前开始调用此方法，可以在这里显示进度对话框。
     override fun onPreExecute() {
         super.onPreExecute()
         Log.d("DownloadXml", "Start")
+
     }
 
+    override fun doInBackground(vararg params: Map?): KmlLayer {
+        Log.d("DownloadXml", "In background")
 
-    fun loadXmlFromNetwork(urlString: String): InputStream {
+        var layer:KmlLayer ?= null
+        try {
+            //Download the KML file from URL into KMLStream
+            val kmlInputStream =downloadUrl("http://www.inf.ed.ac.uk/teaching/courses/cslp/data/songs/"+params[0]?.Num+"/map"+params[0]?.option.toString()+".kml")
+            layer = KmlLayer(params[0]?.map, kmlInputStream, context)
+            return layer
 
-        var stream:InputStream = downloadUrl(urlString) // Do something with stream e.g. parse as XML, build result
+        } catch (e: IOException) {
+            Log.d("DownloadSongs","Unable to load content. Check your network connection")
+        }
+        return layer!!
 
-        return stream
     }
 
     @Throws(IOException::class)
@@ -77,16 +59,12 @@ fun downloadUrl(urlString: String): InputStream {
         return conn.inputStream
 
     }
-    override fun onProgressUpdate(vararg values: Int?) {
-        super.onProgressUpdate(*values)
 
-        //若有复杂逻辑，可以增加异常捕捉
-        progressBar?.progress = values?.get(0) ?: 0
-    }
-
-    //任务执行完了后执行
+    //Execute when the task is done
     override fun onPostExecute(result: KmlLayer?) {
         super.onPostExecute(result)
+
+        //Notify the user that songs have been download successfully
         Toast.makeText(context,"Finish Loading Maps", Toast.LENGTH_LONG).show()
     }
 

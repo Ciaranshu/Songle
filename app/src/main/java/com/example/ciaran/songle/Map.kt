@@ -8,7 +8,7 @@ import com.google.android.gms.maps.GoogleMap
 class Map{
     var map: GoogleMap? = null
     var Num: String ?= null
-    var option: Int = 1
+    var option: Int = 1 //option indicates the version of maps
 
 
     constructor(map: GoogleMap,  mapNum: String, option: Int){
