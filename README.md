@@ -1,5 +1,5 @@
 
-**Table of Contents** {#table-of-contents .TOCHeading}
+**Table of Contents** 
 =====================
 
 1.  **INTRODUCTION**
@@ -175,8 +175,7 @@ Android Platform.
 
 3.1 Bonus Features Design
 
--   ![](/.idea/image2.png){width="2.338888888888889in"
-    height="4.139583333333333in"}Tracking Mode
+-   ![](/.idea/image2.png)Tracking Mode
 
     Songle will track the location of player during the period of word
     collection. The walking trace will be real-time display on the map
@@ -200,10 +199,8 @@ Android Platform.
     the Songle (statistics regarding to each game or each day).
 
     ![/Users/ciaran/Desktop/State
-    01.png](.idea/image3.png){width="2.4012095363079613in"
-    height="4.356568241469816in"} ![/Users/ciaran/Desktop/State
-    02.png](.idea/image4.png){width="2.4315496500437446in"
-    height="4.357746062992126in"}
+    01.png](.idea/image3.png)![/Users/ciaran/Desktop/State
+    02.png](.idea/image4.png)
 
     Figure. 2 Figure. 3
 
@@ -231,13 +228,12 @@ Android Platform.
 
     4.1 Logic of User Interface
 
-    ![](.idea/image5.png){width="6.68125in"
-    height="4.903151793525809in"}
+    ![](.idea/image5.png)
 
     Figure.4 The color matching of UI is inspired by *the Slack "Sign
     In" and "Create a New Team"* (Bondar, 2016)
 
-![](.idea/image6.png){width="6.80625in" height="6.995312773403325in"}
+![](.idea/image6.png)
 
 Figure. 5
 
@@ -250,10 +246,8 @@ title (Figure. 7). In that floating window, 'Skip' button is designed
 for skipping the current song and restart the game with another song.
 'Go!' button is designed for check if the answer is correct.
 
-![../../../../../Desktop/MainActivity.pn](.idea/image7.png){width="2.456692913385827in"
-height="4.343844050743657in"}
-![../../../../../Desktop/GuessActivity.pn](.idea/image8.png){width="2.456692913385827in"
-height="4.343844050743657in"}
+![../../../../../Desktop/MainActivity.pn](.idea/image7.png)
+![../../../../../Desktop/GuessActivity.pn](.idea/image8.png)
 
 Figure. 6 Main Screen Figure. 7 Guessing Screen
 
@@ -263,10 +257,8 @@ correct, player can play another game by clicking on the cross in the
 top-right corner of the floating window. If the answer is incorrect,
 game will resume by clicking on the cross (Figure. 8 and Figure. 9).
 
-![../../../../../Desktop/JudgeActivity2.pn](.idea/image9.png){width="2.456692913385827in"
-height="4.343840769903762in"}
-![../../../../../Desktop/JudgeActivity.pn](.idea/image10.png){width="2.4570319335083113in"
-height="4.344444444444444in"}
+![../../../../../Desktop/JudgeActivity2.pn](.idea/image9.png)
+![../../../../../Desktop/JudgeActivity.pn](.idea/image10.png)
 
 Figure. 8 Answer is correct Figure. 9 Answer is wrong
 
